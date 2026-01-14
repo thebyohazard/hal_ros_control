@@ -27,12 +27,14 @@ set(MACHINEKIT_RIP_PATH
 # HAL_INCLUDE_PATH:  Find HAL include directory
 find_path(
   HAL_INCLUDE_PATH hal.h
-  PATH_SUFFIXES machinekit
+  PATH_SUFFIXES machinekit ""
   PATHS ${MACHINEKIT_RIP_PATH}/include
 )
 
 # HAL_EXECUTABLE:  instcomp python script path
-find_program(HAL_INSTCOMP NAMES instcomp)
+find_program(HAL_INSTCOMP NAMES instcomp
+  PATHS ${MACHINEKIT_RIP_PATH}/bin
+)
 
 # HAL_MODINC:  Path to Makefile.modinc
 execute_process(

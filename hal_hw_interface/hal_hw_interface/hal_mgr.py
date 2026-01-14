@@ -49,12 +49,12 @@ class HalMgr(RosHalComponent):
         self.logger.info(f"Applying fastRTPS SHM hack:  {fastrtps_profiles}")
 
         self.logger.info(f"Starting hal_mgr; debug={d_out}/level={d_lev}")
-        env = dict(
+        env = os.environ.copy()
+        env.update(
             DEBUG=d_lev,
             SYSLOG_TO_STDERR=d_out,
             MACHINEKIT_INI=config.Config().MACHINEKIT_INI,
             FASTRTPS_DEFAULT_PROFILES_FILE=fastrtps_profiles,
-            **os.environ,
         )
         subprocess.check_call(["realtime", "start"], env=env)
         self.add_shutdown_callback(self.stop_realtime, 999)  # run last

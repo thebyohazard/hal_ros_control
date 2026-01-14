@@ -90,7 +90,7 @@ void reset_controller_cb(void)
   **RESET_PIN_PTR = 0;  // clear reset pin
   std::vector<std::string> start_controllers, stop_controllers;
   for (const auto& controller : CONTROLLER_MANAGER->get_loaded_controllers())
-    if (controller.c->get_state().id() ==
+    if (controller.c->get_lifecycle_state().id() ==
         lifecycle_msgs::msg::State::PRIMARY_STATE_ACTIVE)
     {
       HAL_ROS_INFO_NAMED(CNAME, "  - %s", controller.info.name.c_str());
