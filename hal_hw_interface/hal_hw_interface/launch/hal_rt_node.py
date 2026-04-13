@@ -62,6 +62,18 @@ class HalRTNode(HalOrderedNode, HalThreadedReadyAction):
             return True
 
     def execute_deferred_cb(self, context):
+        # Node.execute() ran _perform_substitutions() which set
+        # self.expanded_node_namespace. However, the ros_specific_arguments
+        # that Node.execute() added to context.locals have since been popped
+        # by the launch event-processing loop (_pop_locals). Reconstruct them
+        # here so that LocalSubstitution placeholders in self.cmd (added by
+        # Node._perform_substitutions when namespace is set) can be expanded.
+        ros_specific_arguments = {}
+        ns = self.expanded_node_namespace
+        if ns and ns != self.UNSPECIFIED_NODE_NAMESPACE:
+            ros_specific_arguments['ns'] = f'__ns:={ns}'
+        context.extend_locals({'ros_specific_arguments': ros_specific_arguments})
+
         # Expand command substitutions
         cmd = [perform_substitutions(context, c) for c in self.cmd]
         comp_path = cmd[0]
