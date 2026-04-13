@@ -61,19 +61,39 @@ class HalRTNode(HalOrderedNode, HalThreadedReadyAction):
         else:
             return True
 
-    def execute_deferred_cb(self, context):
-        # Node.execute() ran _perform_substitutions() which set
-        # self.expanded_node_namespace. However, the ros_specific_arguments
-        # that Node.execute() added to context.locals have since been popped
-        # by the launch event-processing loop (_pop_locals). Reconstruct them
-        # here so that LocalSubstitution placeholders in self.cmd (added by
-        # Node._perform_substitutions when namespace is set) can be expanded.
-        ros_specific_arguments = {}
+    def _perform_substitutions(self, context):
+        super()._perform_substitutions(context)
+        # Node._perform_substitutions() may have appended
+        # LocalSubstitution("ros_specific_arguments['ns']") to self.cmd when
+        # namespace is set. execute_deferred_cb runs in a thread where
+        # context.locals is unreliable (popped by the event loop before the
+        # thread runs). Pre-resolve these LocalSubstitutions to concrete
+        # TextSubstitutions now, while context is still valid.
+        from launch.substitutions import LocalSubstitution, TextSubstitution
         ns = self.expanded_node_namespace
+        ros_specific_arguments = {}
         if ns and ns != self.UNSPECIFIED_NODE_NAMESPACE:
             ros_specific_arguments['ns'] = f'__ns:={ns}'
-        context.extend_locals({'ros_specific_arguments': ros_specific_arguments})
+        for i, sub_list in enumerate(self.cmd):
+            new_sub_list = []
+            changed = False
+            for sub in sub_list:
+                if isinstance(sub, LocalSubstitution):
+                    try:
+                        value = eval(  # noqa: S307
+                            sub.expression,
+                            {'ros_specific_arguments': ros_specific_arguments},
+                        )
+                        new_sub_list.append(TextSubstitution(text=value))
+                        changed = True
+                    except (KeyError, NameError, TypeError):
+                        new_sub_list.append(sub)
+                else:
+                    new_sub_list.append(sub)
+            if changed:
+                self.cmd[i] = new_sub_list
 
+    def execute_deferred_cb(self, context):
         # Expand command substitutions
         cmd = [perform_substitutions(context, c) for c in self.cmd]
         comp_path = cmd[0]
