@@ -68,8 +68,9 @@ class HalMgr(Node):
         # Use an absolute topic path: the launch system's internal ROS node
         # is at root namespace, so a relative "hal_mgr/ready" would resolve
         # to /hal_mgr/ready regardless of what namespace hal_mgr runs in.
-        ns = self.expanded_node_namespace or ""
-        ready_topic = f"{ns}/hal_mgr/ready" if ns else "hal_mgr/ready"
+        # Strip trailing "/" so root namespace ("/") doesn't produce "//hal_mgr/ready".
+        ns = (self.expanded_node_namespace or "").rstrip("/")
+        ready_topic = f"{ns}/hal_mgr/ready"
         node = get_ros_node(context)
         self.__hal_mgr_ready_subscription = node.create_subscription(
             Bool,
